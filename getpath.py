@@ -26,12 +26,12 @@ class PathInfo:
                                  time.localtime(mod_time))
         size = os.path.getsize(name)
         if os.path.isdir(name):
-            ext_name = ''
+            ext_name = '<dir>'
         else:
             ext_name = os.path.splitext(filename)[1][1:]
 
-        return [name, ext_name, size, mod_time]
+        return [filename, ext_name, size, mod_time]
 
 if __name__ == "__main__":
     path = u'/home/dormouse/视频'
-    print PathInfo(path).get_path_info()
+    print PathInfo(path).get_infos()

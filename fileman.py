@@ -82,11 +82,22 @@ class MenuExampleWindow(Gtk.Window):
         box.pack_start(toolbar, False, False, 0)
 
         # left tree view and right tree view
-        left_tree = self.init_treeview()
-        right_tree = self.init_treeview()
+        test_path = u'/home/dormouse/视频'
+        left_path = test_path
+        right_path = test_path
+        left_path_label = Gtk.Label(left_path)
+        right_path_label = Gtk.Label(right_path)
+        left_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        right_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        left_tree = self.init_treeview(left_path)
+        right_tree = self.init_treeview(right_path)
+        left_box.pack_start(left_path_label, False, False, 0)
+        right_box.pack_start(right_path_label, False, False, 0)
+        left_box.pack_start(left_tree, True, True, 0)
+        right_box.pack_start(right_tree, True, True, 0)
         hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        hbox.pack_start(left_tree, False, False, 0)
-        hbox.pack_start(right_tree, False, False, 0)
+        hbox.pack_start(left_box, True, True, 10)
+        hbox.pack_start(right_box, True, True, 10)
         box.pack_start(hbox, True, True, 0)
 
         eventbox = Gtk.EventBox()
@@ -100,8 +111,7 @@ class MenuExampleWindow(Gtk.Window):
 
         self.add(box)
 
-    def init_treeview(self):
-        path = u'/home/dormouse/视频'
+    def init_treeview(self, path):
         path_info = PathInfo(path)
         infos = path_info.get_infos()
         fields = path_info.get_fields()
