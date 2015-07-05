@@ -1,10 +1,11 @@
-from gi.repository import Gtk
+from gi.repository import Gtk, GdkPixbuf
 from gi.repository import GObject
 
 class Person (GObject.GObject):
     name = GObject.property(type=str)
     age = GObject.property(type=int)
     gender = GObject.property(type=bool, default=True)
+    pix = GObject.property(type=str)
 
     def __init__(self):
         GObject.GObject.__init__(self)
@@ -32,10 +33,14 @@ class MyApplication (Gtk.Window):
         self.treeview.set_model(self.treestore)
         column = Gtk.TreeViewColumn("Person")
 
-        cell = Gtk.CellRendererText()
-        column.pack_start(cell, True)
+        cell_text = Gtk.CellRendererText()
+        column.pack_start(cell_text, True)
 
-        column.set_cell_data_func(cell, self.get_name)
+        cell_pix = Gtk.CellRendererPixbuf()
+        column.pack_start(cell_pix, False)
+
+        column.set_cell_data_func(cell_text, self.get_text)
+        column.set_cell_data_func(cell_pix, self.get_pix)
 
         self.treeview.append_column(column)
         vbox = Gtk.VBox()
@@ -46,15 +51,19 @@ class MyApplication (Gtk.Window):
         button.connect("clicked", self.retrieve_element)
         vbox.pack_start(button, False, False, 5)
 
-    def get_name(self, column, cell, model, iter, data):
+    def get_text(self, column, cell, model, iter, data):
         cell.set_property('text', self.treestore.get_value(iter, 0).name)
 
+    def get_pix(self, col, cell, model, iter, user_data):
+        cell.set_property('pixbuf', GdkPixbuf.Pixbuf.new_from_file(model.get_value(iter, 0).pix))
+
     def insert_rows(self):
-        for name, age, gender in [("Tom", 19, True), ("Anna", 35, False)]:
+        for name, age, gender, pix in [("Tom", 19, True, "python.png"), ("Anna", 35, False, "python.png")]:
             p = Person()
             p.name = name
             p.age = age
             p.gender = gender
+            p.pix = pix
             self.treestore.append(None, (p,))
 
     def retrieve_element(self, widget):

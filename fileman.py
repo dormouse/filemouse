@@ -3,19 +3,7 @@
 
 from gi.repository import Gtk, Gdk
 
-from getpath import PathInfo
-
-software_list = [("Firefox", 2002,  "C++"),
-                 ("Eclipse", 2004, "Java"),
-                 ("Pitivi", 2004, "Python"),
-                 ("Netbeans", 1996, "Java"),
-                 ("Chrome", 2008, "C++"),
-                 ("Filezilla", 2001, "C++"),
-                 ("Bazaar", 2005, "Python"),
-                 ("Git", 2005, "C"),
-                 ("Linux Kernel", 1991, "C"),
-                 ("GCC", 1987, "C"),
-                 ("Frostwire", 2004, "Java")]
+from treeview import MyTreeView
 
 UI_INFO = """
 <ui>
@@ -57,9 +45,9 @@ UI_INFO = """
 class MenuExampleWindow(Gtk.Window):
 
     def __init__(self):
-        Gtk.Window.__init__(self, title="Menu Example")
+        Gtk.Window.__init__(self, title="File Mouse")
 
-        self.set_default_size(500, 200)
+        self.set_default_size(800, 400)
 
         # action
         action_group = Gtk.ActionGroup("my_actions")
@@ -89,8 +77,10 @@ class MenuExampleWindow(Gtk.Window):
         right_path_label = Gtk.Label(right_path)
         left_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         right_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        left_tree = self.init_treeview(left_path)
-        right_tree = self.init_treeview(right_path)
+        left_tree = MyTreeView()
+        right_tree = MyTreeView()
+        left_tree.pop(left_path)
+        right_tree.pop(right_path)
         left_box.pack_start(left_path_label, False, False, 0)
         right_box.pack_start(right_path_label, False, False, 0)
         left_box.pack_start(left_tree, True, True, 0)
@@ -110,26 +100,6 @@ class MenuExampleWindow(Gtk.Window):
         self.popup = uimanager.get_widget("/PopupMenu")
 
         self.add(box)
-
-    def init_treeview(self, path):
-        path_info = PathInfo(path)
-        infos = path_info.get_infos()
-        fields = path_info.get_fields()
-        print infos
-        print fields
-
-        model = Gtk.ListStore(str, str, int, str)
-        for info in infos:
-            model.append(info)
-
-        treeview = Gtk.TreeView(model)
-
-        for i, column_title in enumerate(fields):
-            renderer = Gtk.CellRendererText()
-            column = Gtk.TreeViewColumn(column_title, renderer, text=i)
-            treeview.append_column(column)
-
-        return treeview
 
     def add_file_menu_actions(self, action_group):
         action_filemenu = Gtk.Action("FileMenu", "File", None, None)
