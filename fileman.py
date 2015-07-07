@@ -4,6 +4,7 @@
 from gi.repository import Gtk, Gdk
 
 from treeview import MyTreeView
+from pan import MyPan, MyWindow
 
 UI_INFO = """
 <ui>
@@ -71,23 +72,12 @@ class MenuExampleWindow(Gtk.Window):
 
         # left tree view and right tree view
         test_path = u'/home/dormouse/视频'
-        left_path = test_path
-        right_path = test_path
-        left_path_label = Gtk.Label(left_path)
-        right_path_label = Gtk.Label(right_path)
-        left_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        right_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        left_tree = MyTreeView()
-        right_tree = MyTreeView()
-        left_tree.pop(left_path)
-        right_tree.pop(right_path)
-        left_box.pack_start(left_path_label, False, False, 0)
-        right_box.pack_start(right_path_label, False, False, 0)
-        left_box.pack_start(left_tree, True, True, 0)
-        right_box.pack_start(right_tree, True, True, 0)
+        self.left_pan = MyPan(test_path)
+        self.right_pan = MyPan(test_path)
+
         hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        hbox.pack_start(left_box, True, True, 10)
-        hbox.pack_start(right_box, True, True, 10)
+        hbox.pack_start(self.left_pan, True, True, 10)
+        hbox.pack_start(self.right_pan, True, True, 10)
         box.pack_start(hbox, True, True, 0)
 
         eventbox = Gtk.EventBox()
@@ -100,6 +90,15 @@ class MenuExampleWindow(Gtk.Window):
         self.popup = uimanager.get_widget("/PopupMenu")
 
         self.add(box)
+
+        self.connect("button-press-event", self.on_button_press_event)
+
+    def on_button_press_event(self, widget, event):
+        print "clicked", widget, type(widget)
+        # Check if right mouse button was preseed
+        if event.type == Gdk.EventType.BUTTON_PRESS and event.button == 3:
+            self.popup.popup(None, None, None, None, event.button, event.time)
+            return True   # event has been handled
 
     def add_file_menu_actions(self, action_group):
         action_filemenu = Gtk.Action("FileMenu", "File", None, None)
@@ -177,11 +176,7 @@ class MenuExampleWindow(Gtk.Window):
         else:
             print(widget.get_name() + " deactivated")
 
-    def on_button_press_event(self, widget, event):
-        # Check if right mouse button was preseed
-        if event.type == Gdk.EventType.BUTTON_PRESS and event.button == 3:
-            self.popup.popup(None, None, None, None, event.button, event.time)
-            return True   # event has been handled
+
 
 window = MenuExampleWindow()
 window.connect("delete-event", Gtk.main_quit)
