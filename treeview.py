@@ -18,6 +18,13 @@ class MyTreeView(Gtk.TreeView):
         self.time_format = "%Y-%m-%d %H:%M:%S"
 
     def pop(self, path):
+        # get top window
+        length = self.get_path().length()
+        #print self.get_parent().get_parent().get_parent().get_parent().get_parent()
+        print self.get_path().length()
+        print self.get_path().to_string()
+
+
         self.path = path
         self.names = [u'图像', u'文件名', u'扩展名', u'大小', u'修改时间']
         self.types = [str, str, str, int, str]
@@ -28,7 +35,7 @@ class MyTreeView(Gtk.TreeView):
 
         """
         Keep for make icon and filename together
-        Alwarys show warnning when test, so keep for later.
+        Always show warning when test, so keep for later.
         ---------------------------------------------------
 
         filename_col = Gtk.TreeViewColumn(names[1])
@@ -76,7 +83,17 @@ class MyTreeView(Gtk.TreeView):
         self.log.debug("eve type: %s", event.type)
         # Check if right mouse button was preseed
         if event.type == Gdk.EventType.BUTTON_PRESS and event.button == 3:
-            self.popup.popup(None, None, None, None, event.button, event.time)
+            # self.log.debug(self.parent())
+            length = self.get_path().length()
+            print self.get_parent().get_parent().get_parent().get_parent().get_parent()
+            print self.get_path().length()
+            print self.get_path().to_string()
+            parent = self.get_parent()
+            for i in range(length-2):
+                print parent
+                parent = parent.get_parent()
+            print parent
+            parent.popup.popup(None, None, None, None, event.button, event.time)
             return True   # event has been handled
         if event.type ==Gdk.EventType._2BUTTON_PRESS:
             self.on_double_clicked()
@@ -100,14 +117,14 @@ class MyTreeView(Gtk.TreeView):
     def get_tree_cell_text(self, col, cell, model, iter, user_data):
         """
         Keep for make icon and filename together
-        Alwarys show warnning when test, so keep for later.
+        Always show warning when test, so keep for later.
         """
         cell.set_property('text', self.model.get_value(iter, 1))
 
     def get_tree_cell_pixbuf(self, col, cell, model, iter, user_data):
         """
         Keep for make icon and filename together
-        Alwarys show warnning when test, so keep for later.
+        Always show warning when test, so keep for later.
         """
         cell.set_property('pixbuf', GdkPixbuf.Pixbuf.new_from_file(self.model.get_value(iter, 0)))
 

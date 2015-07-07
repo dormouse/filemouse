@@ -72,12 +72,12 @@ class MenuExampleWindow(Gtk.Window):
 
         # left tree view and right tree view
         test_path = u'/home/dormouse/视频'
-        self.left_pan = MyPan(test_path)
-        self.right_pan = MyPan(test_path)
+        left_pan = MyPan(test_path)
+        right_pan = MyPan(test_path)
 
         hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        hbox.pack_start(self.left_pan, True, True, 10)
-        hbox.pack_start(self.right_pan, True, True, 10)
+        hbox.pack_start(left_pan, True, True, 10)
+        hbox.pack_start(right_pan, True, True, 10)
         box.pack_start(hbox, True, True, 0)
 
         eventbox = Gtk.EventBox()
