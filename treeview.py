@@ -51,6 +51,10 @@ class MyTreeView(Gtk.TreeView):
         for i, column_title in enumerate(self.names[1:]):
             renderer = Gtk.CellRendererText()
             column = Gtk.TreeViewColumn(column_title, renderer, text=i + 1)
+            if i == 2:
+                w = column.get_widget()
+                print dir(w)
+                w.set_markup("Text can be <small>small</small>, <big>big</big> ")
             self.append_column(column)
 
         select = self.get_selection()

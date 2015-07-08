@@ -59,39 +59,41 @@ class MenuExampleWindow(Gtk.Window):
 
         uimanager = self.create_ui_manager()
         uimanager.insert_action_group(action_group)
-
-        # menubar
         menubar = uimanager.get_widget("/MenuBar")
-
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        box.pack_start(menubar, False, False, 0)
-
-        # toolbar
         toolbar = uimanager.get_widget("/ToolBar")
-        box.pack_start(toolbar, False, False, 0)
+        self.popup = uimanager.get_widget("/PopupMenu")
 
         # left tree view and right tree view
         test_path = u'/home/dormouse/视频'
         left_pan = MyPan(test_path)
         right_pan = MyPan(test_path)
 
-        hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        hbox.pack_start(left_pan, True, True, 10)
-        hbox.pack_start(right_pan, True, True, 10)
-        box.pack_start(hbox, True, True, 0)
+        box_main = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        box_main.pack_start(left_pan, True, True, 10)
+        box_main.pack_start(right_pan, True, True, 10)
 
-        eventbox = Gtk.EventBox()
-        eventbox.connect("button-press-event", self.on_button_press_event)
-        box.pack_start(eventbox, True, True, 0)
+        btn_copy = Gtk.Button("Copy")
+        btn_move = Gtk.Button("Move")
+        btn_copy.connect("clicked", self.on_btn_copy_clicked)
+        btn_move.connect("clicked", self.on_btn_move_clicked)
+        box_opr = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        box_opr.pack_start(btn_copy, False, False, 0)
+        box_opr.pack_start(btn_move, False, False, 0)
 
-        label = Gtk.Label("Right-click to see the popup menu.")
-        eventbox.add(label)
+        box_top = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box_top.pack_start(menubar, False, False, 0)
+        box_top.pack_start(toolbar, False, False, 0)
+        box_top.pack_start(box_main, True, True, 0)
+        box_top.pack_start(box_opr, False, False, 0)
 
-        self.popup = uimanager.get_widget("/PopupMenu")
-
-        self.add(box)
-
+        self.add(box_top)
         self.connect("button-press-event", self.on_button_press_event)
+
+    def on_btn_copy_clicked(self, button):
+        print("\"copy me\" button was clicked")
+
+    def on_btn_move_clicked(self, button):
+        print("\"move me\" button was clicked")
 
     def on_button_press_event(self, widget, event):
         print "clicked", widget, type(widget)
