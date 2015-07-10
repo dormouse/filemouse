@@ -4,8 +4,14 @@
 __author__ = 'dormouse'
 
 import wx
+import logging
 import os
 import time
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s'
+)
 
 ID_BUTTON = 100
 ID_EXIT = 200
@@ -19,7 +25,7 @@ class FileType:
         picBasePath = 'images'
         self.picFiles = [
             os.path.join(picBasePath, "%s.png" % pic) for pic in self.pics
-        ]
+            ]
         print self.picFiles
 
     def GetIndex(self, type):
@@ -33,15 +39,19 @@ class FileType:
 class MyListCtrl(wx.ListCtrl):
     def __init__(self, parent, id):
         wx.ListCtrl.__init__(self, parent, id, style=wx.LC_REPORT)
-
-        files = os.listdir('.')
-
+        self.log = logging.getLogger('MyTreeView')
+        self.time_format = "%Y-%m-%d %H:%M:%S"
+        self.path = None
         self.fileType = FileType()
         self.il = wx.ImageList(16, 16)
         for pic in self.fileType.picFiles:
             print pic
             self.il.Add(wx.Bitmap(pic))
         self.SetImageList(self.il, wx.IMAGE_LIST_SMALL)
+
+    def pop(self, path):
+        self.path = path
+        infos = self.GetFileInfos()
 
         self.InsertColumn(0, 'Name')
         self.InsertColumn(1, 'Ext')
@@ -53,52 +63,57 @@ class MyListCtrl(wx.ListCtrl):
         self.SetColumnWidth(2, 100)
         self.SetColumnWidth(3, 420)
 
+        if path == '/':
+            skipIndex = 0
+        else:
+            skipIndex = 1
+            self.InsertStringItem(0, '..')
+            self.SetItemImage(0, 3)
 
-        j = 1
-        self.InsertStringItem(0, '..')
-        self.SetItemImage(0, 3)
+        for index, info in enumerate(infos):
+            rowIndex = index + skipIndex
+            self.InsertStringItem(rowIndex, info[0])
+            self.SetStringItem(rowIndex, 1, info[1])
+            self.SetStringItem(rowIndex, 2, "%s B"%info[2])
+            self.SetStringItem(rowIndex, 3, info[3])
+            self.SetItemImage(rowIndex, info[-1])
 
-        for i in files:
-            (name, ext) = os.path.splitext(i)
-            ex = ext[1:]
-            size = os.path.getsize(i)
-            sec = os.path.getmtime(i)
-            self.InsertStringItem(j, name)
-            self.SetStringItem(j, 1, ex)
-            self.SetStringItem(j, 2, str(size) + ' B')
-            self.SetStringItem(j, 3, time.strftime('%Y-%m-%d %H:%M',
-                                                   time.localtime(sec)))
-
-            if os.path.isdir(i):
-                self.SetItemImage(j, self.fileType.GetIndex('dir'))
-            elif ex == 'py':
-                self.SetItemImage(j, self.fileType.GetIndex('python'))
-            else:
-                self.SetItemImage(j, self.fileType.GetIndex('unknown'))
-
-            if (j % 2) == 0:
-                self.SetItemBackgroundColour(j, '#e6f1f5')
-            j = j + 1
+            if (rowIndex % 2) == 0:
+                self.SetItemBackgroundColour(rowIndex, '#e6f1f5')
 
     def GetFileInfos(self):
         files = os.listdir(self.path)
-        infos = [self.GetFileInfo(filename) for file in files]
+        infos = [self.GetFileInfo(file) for file in files]
         return infos
 
     def GetFileInfo(self, filename):
-        name = os.path.join(self.path, filename)
-        mod_time = os.path.getmtime(name)
+        """
+        Get file infomation
+        :param
+            filename: short filename
+        :return
+            list of filename like:
+                [picindex, filename, ex, size, mod_time]
+        """
+        fullname = os.path.join(self.path, filename)
+
+        (name, ext) = os.path.splitext(filename)
+        ex = ext[1:]
+
+        if os.path.isdir(fullname):
+            picindex = self.fileType.GetIndex('dir')
+            ex = '<dir>'
+        elif ex == 'py':
+            picindex = self.fileType.GetIndex('python')
+        else:
+            picindex = self.fileType.GetIndex('unknown')
+
+        mod_time = os.path.getmtime(fullname)
         mod_time = time.strftime(self.time_format,
                                  time.localtime(mod_time))
-        size = os.path.getsize(name)
-        if os.path.isdir(name):
-            pic = Gtk.STOCK_DIRECTORY
-            ext_name = '<dir>'
-        else:
-            pic = Gtk.STOCK_FILE
-            ext_name = os.path.splitext(filename)[1][1:]
+        size = os.path.getsize(fullname)
 
-        return [pic, filename, ext_name, size, mod_time]
+        return [filename, ex, size, mod_time, picindex]
 
 
 class FileMouse(wx.Frame):
@@ -110,6 +125,11 @@ class FileMouse(wx.Frame):
 
         p1 = MyListCtrl(self.splitter, -1)
         p2 = MyListCtrl(self.splitter, -1)
+        path1 = '.'
+        path2 = '.'
+        p1.pop(path1)
+        p2.pop(path2)
+
         self.splitter.SplitVertically(p1, p2)
 
         self.Bind(wx.EVT_SIZE, self.OnSize)
