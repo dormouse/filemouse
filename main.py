@@ -36,7 +36,7 @@ class FileType:
             return None
 
 
-class MyListCtrl(wx.ListCtrl):
+class FileListCtrl(wx.ListCtrl):
     def __init__(self, parent, id):
         wx.ListCtrl.__init__(self, parent, id, style=wx.LC_REPORT)
         self.log = logging.getLogger('MyTreeView')
@@ -48,6 +48,7 @@ class MyListCtrl(wx.ListCtrl):
             print pic
             self.il.Add(wx.Bitmap(pic))
         self.SetImageList(self.il, wx.IMAGE_LIST_SMALL)
+        self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnItemSelected, self)
 
     def pop(self, path):
         self.path = path
@@ -64,8 +65,10 @@ class MyListCtrl(wx.ListCtrl):
         self.SetColumnWidth(3, 420)
 
         if path == '/':
+            # 已经位于根目录
             skipIndex = 0
         else:
+            # 不是位于根目录，添加转到上级目录图标
             skipIndex = 1
             self.InsertStringItem(0, '..')
             self.SetItemImage(0, 3)
@@ -115,6 +118,19 @@ class MyListCtrl(wx.ListCtrl):
 
         return [filename, ex, size, mod_time, picindex]
 
+    def getColumnText(self, index, col):
+        item = self.GetItem(index, col)
+        return item.GetText()
+
+    def OnItemSelected(self, event):
+        self.currentItem = event.m_itemIndex
+        print "OnItemSelected: %s, %s, %s, %s" % (self.currentItem,
+                            self.GetItemText(self.currentItem),
+                            self.getColumnText(self.currentItem, 1),
+                            self.getColumnText(self.currentItem, 2))
+
+        event.Skip()
+
 
 class FileMouse(wx.Frame):
     def __init__(self, parent, id, title):
@@ -123,14 +139,14 @@ class FileMouse(wx.Frame):
         self.splitter = wx.SplitterWindow(self, ID_SPLITTER, style=wx.SP_BORDER)
         self.splitter.SetMinimumPaneSize(50)
 
-        p1 = MyListCtrl(self.splitter, -1)
-        p2 = MyListCtrl(self.splitter, -1)
+        leftList = FileListCtrl(self.splitter, -1)
+        rightList = FileListCtrl(self.splitter, -1)
         path1 = '.'
         path2 = '.'
-        p1.pop(path1)
-        p2.pop(path2)
+        leftList.pop(path1)
+        rightList.pop(path2)
 
-        self.splitter.SplitVertically(p1, p2)
+        self.splitter.SplitVertically(leftList, rightList)
 
         self.Bind(wx.EVT_SIZE, self.OnSize)
         self.Bind(wx.EVT_SPLITTER_DCLICK, self.OnDoubleClick, id=ID_SPLITTER)
@@ -152,7 +168,6 @@ class FileMouse(wx.Frame):
         menuBar.Append(helpmenu, "&Help")
         self.SetMenuBar(menuBar)
         self.Bind(wx.EVT_MENU, self.OnExit, id=wx.ID_EXIT)
-
         tb = self.CreateToolBar(wx.TB_HORIZONTAL | wx.NO_BORDER |
                                 wx.TB_FLAT | wx.TB_TEXT)
         """
@@ -195,8 +210,10 @@ class FileMouse(wx.Frame):
         self.sizer.Add(self.sizer2, 0, wx.EXPAND)
         self.SetSizer(self.sizer)
 
-        size = wx.DisplaySize()
-        self.SetSize(size)
+        # 最大化
+        # size = wx.DisplaySize()
+        # self.SetSize(size)
+        self.SetSize((800, 600))
 
         self.sb = self.CreateStatusBar()
         self.sb.SetStatusText(os.getcwd())
