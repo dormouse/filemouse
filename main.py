@@ -14,8 +14,12 @@ logging.basicConfig(
 )
 
 ID_BUTTON = 100
+ID_BUTTON_VIEW = 101
 ID_EXIT = 200
 ID_SPLITTER = 300
+ID_LEFTLIST = 10
+ID_RIGHTLIST = 20
+
 
 
 class FileType:
@@ -39,7 +43,10 @@ class FileType:
 class FileListCtrl(wx.ListCtrl):
     def __init__(self, parent, id):
         wx.ListCtrl.__init__(self, parent, id, style=wx.LC_REPORT)
+
+
         self.log = logging.getLogger('MyTreeView')
+        self.mainWin = self.GetTopLevelParent()
         self.time_format = "%Y-%m-%d %H:%M:%S"
         self.path = None
         self.fileType = FileType()
@@ -49,11 +56,14 @@ class FileListCtrl(wx.ListCtrl):
             self.il.Add(wx.Bitmap(pic))
         self.SetImageList(self.il, wx.IMAGE_LIST_SMALL)
         self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnItemSelected, self)
+        self.Bind(wx.EVT_LEFT_DCLICK, self.OnDoubleClick)
+        self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
 
     def pop(self, path):
-        self.path = path
+        self.path = os.path.abspath(path)
         infos = self.GetFileInfos()
 
+        self.ClearAll()
         self.InsertColumn(0, 'Name')
         self.InsertColumn(1, 'Ext')
         self.InsertColumn(2, 'Size', wx.LIST_FORMAT_RIGHT)
@@ -64,25 +74,31 @@ class FileListCtrl(wx.ListCtrl):
         self.SetColumnWidth(2, 100)
         self.SetColumnWidth(3, 420)
 
-        if path == '/':
+        if self.path == '/':
             # 已经位于根目录
-            skipIndex = 0
+            defaultItem = 0
         else:
             # 不是位于根目录，添加转到上级目录图标
-            skipIndex = 1
+            defaultItem = 1
             self.InsertStringItem(0, '..')
             self.SetItemImage(0, 3)
-
+        self.log.debug("default item:%s", defaultItem)
         for index, info in enumerate(infos):
-            rowIndex = index + skipIndex
+            rowIndex = index + defaultItem
             self.InsertStringItem(rowIndex, info[0])
             self.SetStringItem(rowIndex, 1, info[1])
-            self.SetStringItem(rowIndex, 2, "%s B"%info[2])
+            self.SetStringItem(rowIndex, 2, "%s B" % info[2])
             self.SetStringItem(rowIndex, 3, info[3])
             self.SetItemImage(rowIndex, info[-1])
 
             if (rowIndex % 2) == 0:
                 self.SetItemBackgroundColour(rowIndex, '#e6f1f5')
+
+        # set default selected item
+        self.Select(defaultItem)
+        # self.SetItemState(defaultItem,
+        #                   wx.LIST_STATE_SELECTED,
+        #                   wx.LIST_STATE_SELECTED)
 
     def GetFileInfos(self):
         files = os.listdir(self.path)
@@ -124,23 +140,51 @@ class FileListCtrl(wx.ListCtrl):
 
     def OnItemSelected(self, event):
         self.currentItem = event.m_itemIndex
-        print "OnItemSelected: %s, %s, %s, %s" % (self.currentItem,
-                            self.GetItemText(self.currentItem),
-                            self.getColumnText(self.currentItem, 1),
-                            self.getColumnText(self.currentItem, 2))
+        self.log.debug("Selected: %s, %s, %s, %s" % (self.currentItem,
+                                                  self.GetItemText(self.currentItem),
+                                                  self.getColumnText(self.currentItem, 1),
+                                                  self.getColumnText(self.currentItem, 2))
+                       )
 
         event.Skip()
+
+    def OnDoubleClick(self, event):
+        self.log.debug('double clicked')
+        try:
+            text = self.GetItemText(self.currentItem)
+        except Exception, e:
+            self.log.debug(e)
+            return
+        self.log.debug(self.path)
+        self.log.debug(text)
+        full_filename = os.path.join(self.path, text)
+        if os.path.isdir(full_filename):
+            self.path = full_filename
+            self.log.debug('getting in path: %s', full_filename)
+            self.pop(self.path)
+        else:
+            self.open_file(full_filename)
+        event.Skip()
+
+    def OnLeftDown(self, event):
+        self.log.debug('OnLeftDown')
+        self.mainWin.activeList = self.GetId()
+
+    def open_file(self, filename):
+        self.log.debug("open file: %s", filename)
 
 
 class FileMouse(wx.Frame):
     def __init__(self, parent, id, title):
         wx.Frame.__init__(self, parent, -1, title)
+        self.log = logging.getLogger("MainWindow")
 
         self.splitter = wx.SplitterWindow(self, ID_SPLITTER, style=wx.SP_BORDER)
         self.splitter.SetMinimumPaneSize(50)
 
-        leftList = FileListCtrl(self.splitter, -1)
-        rightList = FileListCtrl(self.splitter, -1)
+        self.activeList = ID_LEFTLIST
+        leftList = FileListCtrl(self.splitter, ID_LEFTLIST)
+        rightList = FileListCtrl(self.splitter, ID_RIGHTLIST)
         path1 = '.'
         path2 = '.'
         leftList.pop(path1)
@@ -204,6 +248,9 @@ class FileMouse(wx.Frame):
         self.sizer2.Add(button8, 1, wx.EXPAND)
 
         self.Bind(wx.EVT_BUTTON, self.OnExit, id=wx.ID_EXIT)
+        self.Bind(wx.EVT_BUTTON, self.OnView, id=ID_BUTTON_VIEW)
+
+        self.Bind(wx.EVT_LEFT_UP, self.OnClick)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer.Add(self.splitter, 1, wx.EXPAND)
@@ -219,6 +266,13 @@ class FileMouse(wx.Frame):
         self.sb.SetStatusText(os.getcwd())
         self.Center()
         self.Show(True)
+
+    def OnClick(self, e):
+        self.log.debug("clicked")
+
+    def OnView(self, e):
+        self.log.debug("On View Button pressed")
+        self.log.debug("active win:%s", self.activeList)
 
     def OnExit(self, e):
         self.Close(True)
