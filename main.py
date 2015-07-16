@@ -1,7 +1,21 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
 
+# Create:   2015-07-09
+# Modify:   2015-07-16
+# Author:   Dormouse Young
+# Email:    dormouse dot young at gmail dot com
+# Licence:  GPLv3
+# Todo:
+#
+# History:
+#
+#
+# Knowing bug:
+# 1. If no dir in path, will not select default item
+
 __author__ = 'dormouse'
+__version__ = '0.1'
 
 import wx
 import logging
@@ -15,11 +29,11 @@ logging.basicConfig(
 
 ID_BUTTON = 100
 ID_BUTTON_VIEW = 101
+ID_BUTTON_COPY = 103
 ID_EXIT = 200
 ID_SPLITTER = 300
 ID_LEFTLIST = 10
 ID_RIGHTLIST = 20
-
 
 
 class FileType:
@@ -30,7 +44,6 @@ class FileType:
         self.picFiles = [
             os.path.join(picBasePath, "%s.png" % pic) for pic in self.pics
             ]
-        print self.picFiles
 
     def GetIndex(self, type):
         try:
@@ -44,15 +57,13 @@ class FileListCtrl(wx.ListCtrl):
     def __init__(self, parent, id):
         wx.ListCtrl.__init__(self, parent, id, style=wx.LC_REPORT)
 
-
-        self.log = logging.getLogger('MyTreeView')
+        self.log = logging.getLogger('FileListCtrl')
         self.mainWin = self.GetTopLevelParent()
         self.time_format = "%Y-%m-%d %H:%M:%S"
         self.path = None
         self.fileType = FileType()
         self.il = wx.ImageList(16, 16)
         for pic in self.fileType.picFiles:
-            print pic
             self.il.Add(wx.Bitmap(pic))
         self.SetImageList(self.il, wx.IMAGE_LIST_SMALL)
         self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnItemSelected, self)
@@ -94,11 +105,27 @@ class FileListCtrl(wx.ListCtrl):
             if (rowIndex % 2) == 0:
                 self.SetItemBackgroundColour(rowIndex, '#e6f1f5')
 
+        # self.UnSelectAll()
         # set default selected item
-        self.Select(defaultItem)
+        # self.Select(defaultItem)
         # self.SetItemState(defaultItem,
         #                   wx.LIST_STATE_SELECTED,
         #                   wx.LIST_STATE_SELECTED)
+        self.mainWin.sb.SetStatusText(self.path)
+
+    def UnSelectAll(self):
+        self.log.debug('%s itmes is selected', self.GetSelectedItemCount())
+        if self.GetSelectedItemCount():
+            for i in range(self.GetItemCount()):
+                if self.IsSelected(i):
+                    self.Select(i)
+
+    def GetAllSelected(self):
+        items = []
+        for i in range(self.GetItemCount()):
+            if self.IsSelected(i):
+                items.append(i)
+        return items
 
     def GetFileInfos(self):
         files = os.listdir(self.path)
@@ -134,17 +161,20 @@ class FileListCtrl(wx.ListCtrl):
 
         return [filename, ex, size, mod_time, picindex]
 
-    def getColumnText(self, index, col):
+    def GetColumnText(self, index, col):
         item = self.GetItem(index, col)
         return item.GetText()
 
     def OnItemSelected(self, event):
         self.currentItem = event.m_itemIndex
-        self.log.debug("Selected: %s, %s, %s, %s" % (self.currentItem,
-                                                  self.GetItemText(self.currentItem),
-                                                  self.getColumnText(self.currentItem, 1),
-                                                  self.getColumnText(self.currentItem, 2))
-                       )
+        self.log.debug(
+            "Selected: %s, %s, %s, %s" % (
+                self.currentItem,
+                self.GetItemText(self.currentItem),
+                self.GetColumnText(self.currentItem, 1),
+                self.GetColumnText(self.currentItem, 2)
+            )
+        )
 
         event.Skip()
 
@@ -168,7 +198,9 @@ class FileListCtrl(wx.ListCtrl):
 
     def OnLeftDown(self, event):
         self.log.debug('OnLeftDown')
-        self.mainWin.activeList = self.GetId()
+        self.mainWin.activeListId = self.GetId()
+        self.mainWin.sb.SetStatusText(self.path)
+        event.Skip()
 
     def open_file(self, filename):
         self.log.debug("open file: %s", filename)
@@ -182,7 +214,9 @@ class FileMouse(wx.Frame):
         self.splitter = wx.SplitterWindow(self, ID_SPLITTER, style=wx.SP_BORDER)
         self.splitter.SetMinimumPaneSize(50)
 
-        self.activeList = ID_LEFTLIST
+        self.sb = self.CreateStatusBar()
+
+        self.activeListId = ID_LEFTLIST
         leftList = FileListCtrl(self.splitter, ID_LEFTLIST)
         rightList = FileListCtrl(self.splitter, ID_RIGHTLIST)
         path1 = '.'
@@ -229,9 +263,9 @@ class FileMouse(wx.Frame):
 
         self.sizer2 = wx.BoxSizer(wx.HORIZONTAL)
 
-        button1 = wx.Button(self, ID_BUTTON + 1, "F3 View")
+        button1 = wx.Button(self, ID_BUTTON_VIEW, "F3 View")
         button2 = wx.Button(self, ID_BUTTON + 2, "F4 Edit")
-        button3 = wx.Button(self, ID_BUTTON + 3, "F5 Copy")
+        button3 = wx.Button(self, ID_BUTTON_COPY, "F5 Copy")
         button4 = wx.Button(self, ID_BUTTON + 4, "F6 Move")
         button5 = wx.Button(self, ID_BUTTON + 5, "F7 Mkdir")
         button6 = wx.Button(self, ID_BUTTON + 6, "F8 Delete")
@@ -249,6 +283,7 @@ class FileMouse(wx.Frame):
 
         self.Bind(wx.EVT_BUTTON, self.OnExit, id=wx.ID_EXIT)
         self.Bind(wx.EVT_BUTTON, self.OnView, id=ID_BUTTON_VIEW)
+        self.Bind(wx.EVT_BUTTON, self.OnCopy, id=ID_BUTTON_COPY)
 
         self.Bind(wx.EVT_LEFT_UP, self.OnClick)
 
@@ -262,20 +297,40 @@ class FileMouse(wx.Frame):
         # self.SetSize(size)
         self.SetSize((800, 600))
 
-        self.sb = self.CreateStatusBar()
-        self.sb.SetStatusText(os.getcwd())
         self.Center()
         self.Show(True)
 
-    def OnClick(self, e):
+    def OnClick(self, event):
         self.log.debug("clicked")
+        event.Skip()
 
-    def OnView(self, e):
+    def OnCopy(self, event):
+        self.log.debug("On Copy Button pressed")
+        self.log.debug("active win:%s", self.activeListId)
+        if self.activeListId == ID_LEFTLIST:
+            sourceList = self.FindWindowById(ID_LEFTLIST)
+            targetList = self.FindWindowById(ID_RIGHTLIST)
+        else:
+            targetList = self.FindWindowById(ID_LEFTLIST)
+            sourceList = self.FindWindowById(ID_RIGHTLIST)
+        fileIndexs = sourceList.GetAllSelected()
+        for index in fileIndexs:
+            filename = sourceList.GetItemText(index)
+            self.log.debug("copy %s to %s", filename, targetList.path)
+
+        event.Skip()
+
+    def OnView(self, event):
         self.log.debug("On View Button pressed")
-        self.log.debug("active win:%s", self.activeList)
+        self.log.debug("active win:%s", self.activeListId)
+        list = self.FindWindowById(self.activeListId)
+        print list.GetId()
+        print list.GetAllSelected()
+        event.Skip()
 
-    def OnExit(self, e):
+    def OnExit(self, event):
         self.Close(True)
+        event.Skip()
 
     def OnSize(self, event):
         size = self.GetSize()
@@ -286,6 +341,7 @@ class FileMouse(wx.Frame):
     def OnDoubleClick(self, event):
         size = self.GetSize()
         self.splitter.SetSashPosition(size.x / 2)
+        event.Skip()
 
 
 app = wx.App(0)
