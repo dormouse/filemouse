@@ -6,13 +6,17 @@
 # Author:   Dormouse Young
 # Email:    dormouse dot young at gmail dot com
 # Licence:  GPLv3
+
 # Todo:
 #
+
 # History:
 #
 #
+
 # Knowing bug:
 # 1. If no dir in path, will not select default item
+
 
 __author__ = 'dormouse'
 __version__ = '0.1'
@@ -20,6 +24,7 @@ __version__ = '0.1'
 import wx
 import logging
 import os
+import shutil
 import time
 
 logging.basicConfig(
@@ -27,13 +32,12 @@ logging.basicConfig(
     format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s'
 )
 
-ID_BUTTON = 100
-ID_BUTTON_VIEW = 101
-ID_BUTTON_COPY = 103
-ID_EXIT = 200
-ID_SPLITTER = 300
-ID_LEFTLIST = 10
-ID_RIGHTLIST = 20
+ID_BUTTON = wx.NewId()
+ID_BUTTON_VIEW = wx.NewId()
+ID_BUTTON_COPY = wx.NewId()
+ID_SPLITTER = wx.NewId()
+ID_LEFTLIST = wx.NewId()
+ID_RIGHTLIST = wx.NewId()
 
 
 class FileType:
@@ -120,6 +124,9 @@ class FileListCtrl(wx.ListCtrl):
                 if self.IsSelected(i):
                     self.Select(i)
 
+    def refresh(self):
+        self.pop(self.path)
+
     def GetAllSelected(self):
         items = []
         for i in range(self.GetItemCount()):
@@ -187,13 +194,17 @@ class FileListCtrl(wx.ListCtrl):
             return
         self.log.debug(self.path)
         self.log.debug(text)
-        full_filename = os.path.join(self.path, text)
-        if os.path.isdir(full_filename):
-            self.path = full_filename
-            self.log.debug('getting in path: %s', full_filename)
-            self.pop(self.path)
+        fullname = os.path.join(self.path, text)
+        self.log.debug("fullfilename:%s", fullname)
+        if os.access(fullname, os.R_OK):
+            if os.path.isdir(fullname):
+                self.path = fullname
+                self.log.debug('getting in path: %s', fullname)
+                self.pop(self.path)
+            else:
+                self.open_file(fullname)
         else:
-            self.open_file(full_filename)
+            self.mainWin.sb.SetStatusText('Permission denied')
         event.Skip()
 
     def OnLeftDown(self, event):
@@ -219,8 +230,8 @@ class FileMouse(wx.Frame):
         self.activeListId = ID_LEFTLIST
         leftList = FileListCtrl(self.splitter, ID_LEFTLIST)
         rightList = FileListCtrl(self.splitter, ID_RIGHTLIST)
-        path1 = '.'
-        path2 = '.'
+        path1 = '/tmp'
+        path2 = '/tmp'
         leftList.pop(path1)
         rightList.pop(path2)
 
@@ -317,6 +328,27 @@ class FileMouse(wx.Frame):
         for index in fileIndexs:
             filename = sourceList.GetItemText(index)
             self.log.debug("copy %s to %s", filename, targetList.path)
+            fullname = os.path.join(sourceList.path, filename)
+            targetDir = targetList.path
+
+            if os.access(fullname, os.R_OK) and os.access( targetDir, os.W_OK):
+                if os.path.isfile(fullname):
+                    shutil.copy2(fullname, targetDir)
+                if os.path.isdir(fullname):
+                    shutil.copytree(
+                        fullname, os.path.join(targetDir, filename))
+            else:
+                dlg = wx.MessageDialog(
+                    self,
+                    'Copy %s to\n %s'% (fullname, targetList.path),
+                    'Access Permission denied',
+                    wx.OK | wx.ICON_INFORMATION
+                    #wx.YES_NO | wx.NO_DEFAULT | wx.CANCEL | wx.ICON_INFORMATION
+                )
+                dlg.ShowModal()
+                dlg.Destroy()
+
+        targetList.refresh()
 
         event.Skip()
 
