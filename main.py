@@ -8,7 +8,7 @@
 # Licence:  GPLv3
 
 # Todo:
-#
+#    show permission
 
 # History:
 #
@@ -35,6 +35,7 @@ logging.basicConfig(
 ID_BUTTON = wx.NewId()
 ID_BUTTON_VIEW = wx.NewId()
 ID_BUTTON_COPY = wx.NewId()
+ID_BUTTON_MKDIR = wx.NewId()
 ID_SPLITTER = wx.NewId()
 ID_LEFTLIST = wx.NewId()
 ID_RIGHTLIST = wx.NewId()
@@ -278,7 +279,7 @@ class FileMouse(wx.Frame):
         button2 = wx.Button(self, ID_BUTTON + 2, "F4 Edit")
         button3 = wx.Button(self, ID_BUTTON_COPY, "F5 Copy")
         button4 = wx.Button(self, ID_BUTTON + 4, "F6 Move")
-        button5 = wx.Button(self, ID_BUTTON + 5, "F7 Mkdir")
+        button5 = wx.Button(self, ID_BUTTON_MKDIR, "F7 Mkdir")
         button6 = wx.Button(self, ID_BUTTON + 6, "F8 Delete")
         button7 = wx.Button(self, ID_BUTTON + 7, "F9 Rename")
         button8 = wx.Button(self, wx.ID_EXIT, "F10 Quit")
@@ -295,6 +296,7 @@ class FileMouse(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnExit, id=wx.ID_EXIT)
         self.Bind(wx.EVT_BUTTON, self.OnView, id=ID_BUTTON_VIEW)
         self.Bind(wx.EVT_BUTTON, self.OnCopy, id=ID_BUTTON_COPY)
+        self.Bind(wx.EVT_BUTTON, self.OnMkdir, id=ID_BUTTON_MKDIR)
 
         self.Bind(wx.EVT_LEFT_UP, self.OnClick)
 
@@ -331,7 +333,7 @@ class FileMouse(wx.Frame):
             fullname = os.path.join(sourceList.path, filename)
             targetDir = targetList.path
 
-            if os.access(fullname, os.R_OK) and os.access( targetDir, os.W_OK):
+            if os.access(fullname, os.R_OK) and os.access(targetDir, os.W_OK):
                 if os.path.isfile(fullname):
                     shutil.copy2(fullname, targetDir)
                 if os.path.isdir(fullname):
@@ -350,6 +352,55 @@ class FileMouse(wx.Frame):
 
         targetList.refresh()
 
+        event.Skip()
+
+    def OnMkdir(self, event):
+        self.log.debug("On Mkdir Button pressed")
+        sourceList = self.FindWindowById(self.activeListId)
+        sourcePath = sourceList.path
+        errorMsg = None
+        if os.access(sourcePath, os.W_OK):
+            # make default dir name
+            defaultName = 'New dir'
+            dirName = 'New dir'
+            fullDirName = os.path.join(sourcePath, dirName)
+            if os.path.exists(fullDirName):
+                isExists = True
+                index = 0
+                while isExists:
+                    index += 1
+                    dirName = defaultName + str(index)
+                    fullDirName = os.path.join(sourcePath, dirName)
+                    isExists = os.path.exists(fullDirName)
+
+            dlg = wx.TextEntryDialog(
+                self,
+                'Please enter name of dir',
+                'Enter Dir Name',
+                dirName
+            )
+
+            if dlg.ShowModal() == wx.ID_OK:
+                try:
+                    os.mkdir(os.path.join(sourcePath,dlg.GetValue()))
+                except Exception, e:
+                    errorMsg = e
+            dlg.Destroy()
+        else:
+            errorMsg = 'Access Permission denied'
+
+        if errorMsg:
+            dlg = wx.MessageDialog(
+                self,
+                'Mkdir in %s Fail\n'% (sourcePath),
+                errorMsg,
+                wx.OK | wx.ICON_INFORMATION
+                #wx.YES_NO | wx.NO_DEFAULT | wx.CANCEL | wx.ICON_INFORMATION
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+        else:
+            sourceList.refresh()
         event.Skip()
 
     def OnView(self, event):
