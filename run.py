@@ -214,12 +214,13 @@ class CmdButtonBox(QWidget):
         }
         button_widgets = {}
         for k, v in buttons.items():
-            button_widgets[k] = QPushButton(v)
-            button_widgets[k].clicked.connect(partial(self.cmd, k))
-            main_layout.addWidget(button_widgets[k])
+            button = QPushButton(v)
+            button.clicked.connect(partial(self.button_clicked, k))
+            main_layout.addWidget(button)
+            button_widgets[k] = button
         self.setLayout(main_layout)
 
-    def cmd(self, cmd_str):
+    def button_clicked(self, cmd_str):
         self.nativeParentWidget().cmd(cmd_str)
 
 
@@ -300,6 +301,7 @@ class MainWindow(QMainWindow):
             if path:
                 core.cmd_edit(path)
         elif cmd == 'f5':
+            self.logger.debug('copy')
             source = self.activated_view.get_selected_paths()
             target = self.deactivated_view.model.rootPath()
             self.logger.debug(source)

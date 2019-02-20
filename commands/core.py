@@ -14,7 +14,6 @@ import sys
 import subprocess
 from pathlib import Path
 
-
 logging.basicConfig(
     format='%(asctime)s %(module)s %(funcName)s %(levelname)s %(message)s',
     level=logging.DEBUG
@@ -60,6 +59,16 @@ def cmd_edit(path):
         if view_cmd:
             subprocess.run([view_cmd, edit_path])
 
+
 def copy(source, target):
     s_path = Path(source)
     t_path = Path(target)
+
+    try:
+        with t_path.open(mode='xb') as fid:
+            fid.write(s_path.read_bytes())
+    except FileExistsError:
+        msg = 'file exists'
+        return msg
+    else:
+        return None
